@@ -1,7 +1,6 @@
 import streamlit as st
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
@@ -9,12 +8,20 @@ from langchain_community.vectorstores import Chroma
 import os
 
 
+
+# def load_docs(text_files):
+#     documents = []
+#     for text_file in text_files:
+#         content = text_file.getvalue().decode("utf-8")
+#         documents.append(content)
+#     return "\n".join(documents)
+
 def load_docs(text_files):
     documents = []
     for text_file in text_files:
         content = text_file.getvalue().decode("utf-8")
         documents.append(content)
-    return "\n".join(documents)
+    return documents
 
 
 def get_text_chunks(documents):
@@ -23,12 +30,11 @@ def get_text_chunks(documents):
         chunk_overlap=50,
         length_function=len
     )
-    chunks = text_splitter.split_text(documents)
+    chunks = text_splitter.create_documents(documents)
     return chunks
 
 
-def get_vectorstore(text_chunks):
-    persist_directory = "chroma_db1"
+def get_vectorstore(persist_directory):
     embeddings = OpenAIEmbeddings()
     vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
     return vectorstore
@@ -49,19 +55,20 @@ def get_conversation_chain(vectorstore):
 def handle_userinput(user_question):
     response = st.session_state.conversation({'question': user_question})
     st.session_state.chat_history = response['chat_history']
-
     
-    for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
+
+    for i, message in reversed(list(enumerate(st.session_state.chat_history))):
+        if i % 2 != 0:
             st.write(user_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
         else:
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
+        
 
 
 def main():
-    os.environ["OPENAI_API_KEY"]= "Your OpenAI_API_KEY"
+    os.environ["OPENAI_API_KEY"]= "YOUR OPENAI_API_KEY"
     st.set_page_config(page_title="Chat with multiple Files",
                        page_icon=":books:")
     st.write(css, unsafe_allow_html=True)
@@ -82,14 +89,25 @@ def main():
             "Upload your text files here and click on 'Process'", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
-                # get text
-                raw_text = load_docs(text_file)
+
+                documents = load_docs(text_file)
  
+                # Create OpenAIEmbeddings object
+                embeddings = OpenAIEmbeddings()
+
+                # Persist directory for Chroma database
+                persist_directory = "chroma_db3"
+
                 # get the text chunks
-                text_chunks = get_text_chunks(raw_text)
+                text_chunks = get_text_chunks(documents)
+
+                # Create Chroma database
+                vectordb = Chroma.from_documents(documents=text_chunks, embedding=embeddings, persist_directory=persist_directory)
+                vectordb.persist()
+ 
 
                 # create vector store
-                vectorstore = get_vectorstore(text_chunks)
+                vectorstore = get_vectorstore(persist_directory)
 
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
