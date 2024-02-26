@@ -8,14 +8,6 @@ from langchain_community.vectorstores import Chroma
 import os
 
 
-
-# def load_docs(text_files):
-#     documents = []
-#     for text_file in text_files:
-#         content = text_file.getvalue().decode("utf-8")
-#         documents.append(content)
-#     return "\n".join(documents)
-
 def load_docs(text_files):
     documents = []
     for text_file in text_files:
@@ -32,12 +24,6 @@ def get_text_chunks(documents):
     )
     chunks = text_splitter.create_documents(documents)
     return chunks
-
-
-def get_vectorstore(persist_directory):
-    embeddings = OpenAIEmbeddings()
-    vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
-    return vectorstore
 
 
 def get_conversation_chain(vectorstore):
@@ -68,7 +54,7 @@ def handle_userinput(user_question):
 
 
 def main():
-    os.environ["OPENAI_API_KEY"]= "YOUR OPENAI_API_KEY"
+    os.environ["OPENAI_API_KEY"]= "Your OPENAI_API_KEY"
     st.set_page_config(page_title="Chat with multiple Files",
                        page_icon=":books:")
     st.write(css, unsafe_allow_html=True)
@@ -104,14 +90,16 @@ def main():
                 # Create Chroma database
                 vectordb = Chroma.from_documents(documents=text_chunks, embedding=embeddings, persist_directory=persist_directory)
                 vectordb.persist()
- 
+                final_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+                matching_final= final_db.similarity_search_with_score(user_question,k=3)
 
                 # create vector store
-                vectorstore = get_vectorstore(persist_directory)
+                #vectorstore = get_vectorstore(persist_directory)
+
 
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
-                    vectorstore)
+                    final_db)
 
 
 if __name__ == '__main__':
