@@ -26,6 +26,15 @@ def get_text_chunks(documents):
     return chunks
 
 
+def get_vectorstore(persist_directory, text_chunks, user_question):
+    embeddings = OpenAIEmbeddings()
+    vectordb = Chroma.from_documents(documents=text_chunks, embedding=embeddings, persist_directory=persist_directory)
+    vectordb.persist()
+    final_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+    final_db.similarity_search_with_score(user_question,k=3)
+    return final_db
+
+
 def get_conversation_chain(vectorstore):
     llm = ChatOpenAI()
     memory = ConversationBufferMemory(
@@ -54,7 +63,7 @@ def handle_userinput(user_question):
 
 
 def main():
-    os.environ["OPENAI_API_KEY"]= "Your OPENAI_API_KEY"
+    os.environ["OPENAI_API_KEY"]= "YOUR OPENAI_API_KEY"
     st.set_page_config(page_title="Chat with multiple Files",
                        page_icon=":books:")
     st.write(css, unsafe_allow_html=True)
@@ -79,7 +88,7 @@ def main():
                 documents = load_docs(text_file)
  
                 # Create OpenAIEmbeddings object
-                embeddings = OpenAIEmbeddings()
+                # embeddings = OpenAIEmbeddings()
 
                 # Persist directory for Chroma database
                 persist_directory = "chroma_db3"
@@ -88,18 +97,18 @@ def main():
                 text_chunks = get_text_chunks(documents)
 
                 # Create Chroma database
-                vectordb = Chroma.from_documents(documents=text_chunks, embedding=embeddings, persist_directory=persist_directory)
-                vectordb.persist()
-                final_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
-                matching_final= final_db.similarity_search_with_score(user_question,k=3)
+                # vectordb = Chroma.from_documents(documents=text_chunks, embedding=embeddings, persist_directory=persist_directory)
+                # vectordb.persist()
+                # final_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+                # matching_final= final_db.similarity_search_with_score(user_question,k=3)
 
                 # create vector store
-                #vectorstore = get_vectorstore(persist_directory)
+                vectorstore = get_vectorstore(persist_directory, text_chunks, user_question)
 
 
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
-                    final_db)
+                    vectorstore)
 
 
 if __name__ == '__main__':
