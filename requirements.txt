@@ -1,0 +1,10 @@
+langchain==0.1.9
+langchain-community==0.0.24
+langchain-core==0.1.26
+langchain-openai==0.0.7
+langsmith==0.1.5
+streamlit==1.31.1
+unstructured==0.12.4
+unstructured-client==0.18.0
+tiktoken==0.6.0
+chromadb==0.4.23
