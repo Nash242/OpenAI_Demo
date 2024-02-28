@@ -66,7 +66,7 @@ def handle_user_input(user_question):
         response = st.session_state.conversation({'question': user_question})
         if st.session_state.chat_history is None:
             st.session_state.chat_history = []
-        st.session_state.chat_history.extend(response['chat_history'])
+        st.session_state.chat_history = response['chat_history'] + st.session_state.chat_history
         for i, message in list(enumerate(st.session_state.chat_history)):
             if i % 2 != 0:
                 st.write(user_template.replace(
