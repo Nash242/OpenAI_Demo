@@ -64,8 +64,10 @@ def create_conversation_chain(vector_store):
 def handle_user_input(user_question):
     if callable(st.session_state.conversation):
         response = st.session_state.conversation({'question': user_question})
-        st.session_state.chat_history = response['chat_history']
-        for i, message in reversed(list(enumerate(st.session_state.chat_history))):
+        if st.session_state.chat_history is None:
+            st.session_state.chat_history = []
+        st.session_state.chat_history.extend(response['chat_history'])
+        for i, message in list(enumerate(st.session_state.chat_history)):
             if i % 2 != 0:
                 st.write(user_template.replace(
                     "{{MSG}}", message.content), unsafe_allow_html=True)
@@ -99,32 +101,21 @@ def main():
     if user_question:
         handle_user_input(user_question)
 
-    with st.sidebar:
-        st.subheader("Your Files in Folders")
-        directory_path = st.text_input("Enter the directory path:")
-        if st.button("List Files"):
-            if os.path.isdir(directory_path):
-                files = list_files(directory_path)
-                st.write("Files in the directory:")
-                st.write(files)
-            else:
-                st.error("Invalid directory path. Please enter a valid directory path.")
-
-        if st.button("Process"):
-            with st.spinner("Processing"):
-                if os.path.isdir(directory_path):
-                    documents = load_docs_from_folder(directory_path)
-                    if documents:
-                        persist_directory = "chroma_db"
-                        text_chunks = get_text_chunks(documents)
-                        vector_store = create_vectorstore(
-                            persist_directory, text_chunks, user_question)
-                        st.session_state.conversation = create_conversation_chain(
-                            vector_store)
-                    else:
-                        st.warning("No text files found in the folder.")
-                else:
-                    st.error("Invalid folder path. Please enter a valid path.")
+    directory_path = "D:\\Python\\Visual Studio\\OPENAI\\contents"
+    
+    if os.path.isdir(directory_path):
+        documents = load_docs_from_folder(directory_path)
+        if documents:
+            persist_directory = "chroma_db"
+            text_chunks = get_text_chunks(documents)
+            vector_store = create_vectorstore(
+                persist_directory, text_chunks, user_question)
+            st.session_state.conversation = create_conversation_chain(
+                vector_store)
+        else:
+            st.warning("No text files found in the folder.")
+    else:
+        st.error("Invalid folder path. Please enter a valid path.")
 
 
 if __name__ == '__main__':
