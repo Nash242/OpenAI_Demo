@@ -75,30 +75,33 @@ def main():
     llm_model = "gpt-3.5-turbo"
     llm = ChatOpenAI(temperature=0.1, model=llm_model)
     qa_chain = load_qa_chain(llm, chain_type="stuff")
+    # qa_chain = create_stuff_documents_chain(llm, prompt)
 
-    question = st.text_input("Enter your question:")
+    question = st.chat_input("Enter your question:")
     if question:
         matching_docs = vectordb.similarity_search(question)
         input_data = {'question': question, 'input_documents': matching_docs}
         answer = qa_chain.invoke(input=input_data)
         st.session_state.past.append(question)
         st.session_state.generated.append(answer['output_text'])
-        unanswered_phrases = ["I don't know.", "I don't have much information", "I don't have any information", "I'm unable to provide an answer"]  # Add more phrases if needed
+        unanswered_phrases = ["I don't know.", "I don't have much information", "I don't have any information", "I'm unable to provide an answer","I don't have enough information to answer that question.", "I don't have information about in the provided context."]  # Add more phrases if needed
         if any(phrase in answer.get('output_text', '') for phrase in unanswered_phrases):
             unanswered_question = f"Unanswered question: {question}\n"
             log_file_path = "log.txt"
             with open(log_file_path, "a") as log_file:
                 log_file.write(unanswered_question)
             st.error("Sorry, I'm unable to provide an answer to this question at the moment")
+            
         else:
-            for i in range(len(st.session_state['generated'])- 1, -1, -1):
+            for i in range(len(st.session_state['generated'])):
                 message(st.session_state['past'][i], is_user=True, key=str(i) + '_user')
                 message(st.session_state['generated'][i], key=str(i))
-                
-                for document in answer['input_documents']:
-                    if 'source' in document.metadata:
-                        st.write(f"Source: {document.metadata['source']}")
-                        break
+                with st.expander("Document Similarity Search"):
+                    # Find the relevant chunks
+                    for i, document in enumerate(answer["input_documents"]):
+                        st.write(document.page_content)
+                        st.write("--------------------------------")
+                        st.write("#################################")
 
 if __name__ == "__main__":
     main()
