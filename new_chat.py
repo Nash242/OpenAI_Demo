@@ -25,30 +25,52 @@ def split_docs(documents, chunk_size=1000, chunk_overlap=50):
 
 def create_vectors(persist_directory, directory, docs):
     embeddings = OpenAIEmbeddings()
+    
     if os.path.exists(persist_directory):
-        processed_files = st.session_state.get('processed_files', [])
+        processed_files = set()
+        processed_files_path = "processed.txt"
+        
+        # Load processed files from processed.txt if exists
+        if os.path.exists(processed_files_path):
+            with open(processed_files_path, "r") as file:
+                processed_files.update(file.read().splitlines())
+        
         current_files = os.listdir(directory)
         new_files = [file for file in current_files if file not in processed_files]
+        
         if new_files:
+            print("New files detected:", new_files)
             documents = load_docs(directory)
             docs = split_docs(documents)
-
-            embeddings = OpenAIEmbeddings()
 
             # Create or fetch Chroma vector database
             vectors = Chroma.from_documents(documents=docs, embedding=embeddings, persist_directory=persist_directory)
             vectors.persist()
             vectordb = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+            
+            # Append new file names to processed.txt
+            with open(processed_files_path, "a") as file:
+                for new_file in new_files:
+                    file.write(new_file + "\n")
+            
             return vectordb
         else:
+            print("No new files detected. Using existing vector database.")
             vectordb = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
             return vectordb
     else:
         os.makedirs(persist_directory)
-        # Create or fetch Chroma vector database
+        
+        # Create Chroma vector database
         vectors = Chroma.from_documents(documents=docs, embedding=embeddings, persist_directory=persist_directory)
         vectors.persist()
         vectordb = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+        
+        # Create and initialize processed.txt
+        processed_files_path = "processed.txt"
+        with open(processed_files_path, "w") as file:
+            file.write("")
+        
         return vectordb
 
 
