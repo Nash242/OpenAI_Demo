@@ -64,6 +64,7 @@ def main():
     if 'past' not in st.session_state:
         st.session_state['past'] = []
 
+
     directory = "D:\\Python\\Visual Studio\\OPENAI\\contents\\"
     persist_directory = "chroma_db"    
 
@@ -74,34 +75,47 @@ def main():
     vectordb = create_vectors(persist_directory, directory, docs)
     llm_model = "gpt-3.5-turbo"
     llm = ChatOpenAI(temperature=0.1, model=llm_model)
+    
     qa_chain = load_qa_chain(llm, chain_type="stuff")
     # qa_chain = create_stuff_documents_chain(llm, prompt)
-
     question = st.chat_input("Enter your question:")
     if question:
-        matching_docs = vectordb.similarity_search(question)
-        input_data = {'question': question, 'input_documents': matching_docs}
-        answer = qa_chain.invoke(input=input_data)
-        st.session_state.past.append(question)
-        st.session_state.generated.append(answer['output_text'])
-        unanswered_phrases = ["I don't know.", "I don't have much information", "I don't have any information", "I'm unable to provide an answer","I don't have enough information to answer that question.", "I don't have information about in the provided context."]  # Add more phrases if needed
-        if any(phrase in answer.get('output_text', '') for phrase in unanswered_phrases):
-            unanswered_question = f"Unanswered question: {question}\n"
-            log_file_path = "log.txt"
-            with open(log_file_path, "a") as log_file:
-                log_file.write(unanswered_question)
-            st.error("Sorry, I'm unable to provide an answer to this question at the moment")
-            
-        else:
-            for i in range(len(st.session_state['generated'])):
-                message(st.session_state['past'][i], is_user=True, key=str(i) + '_user')
-                message(st.session_state['generated'][i], key=str(i))
-                with st.expander("Document Similarity Search"):
-                    # Find the relevant chunks
-                    for i, document in enumerate(answer["input_documents"]):
-                        st.write(document.page_content)
-                        st.write("--------------------------------")
-                        st.write("#################################")
+        with st.spinner("Please wait"):
+            matching_docs = vectordb.similarity_search(question)
+            input_data = {'question': question, 'input_documents': matching_docs}
+            answer = qa_chain.invoke(input=input_data)
+            st.session_state.past.append(question)
+            st.session_state.generated.append(answer['output_text'])
+            unanswered_phrases = ["I don't know.", "I don't have much information", "I don't have any information", "I'm unable to provide an answer","I don't have enough information to answer that question.", "I don't have information about in the provided context."]  # Add more phrases if needed
+            if any(phrase in answer.get('output_text', '') for phrase in unanswered_phrases):
+                unanswered_question = f"Unanswered question: {question}\n"
+                log_file_path = "log.txt"
+                with open(log_file_path, "a") as log_file:
+                    log_file.write(unanswered_question)
+                st.error("Sorry, I'm unable to provide an answer to this question at the moment")
+
+            else:
+                for i in range(len(st.session_state['generated'])):
+                    message(st.session_state['past'][i], is_user=True, key=str(i) + '_user')
+                    message(st.session_state['generated'][i], key=str(i))
+                
+                    with st.expander("Document Similarity Search"):
+                        # Find the relevant chunks
+                        for i, document in enumerate(answer["input_documents"]):
+                            st.write(document.page_content)
+                            st.write(document.metadata)  
+                            st.write("--------------------------------")
+                    st.session_state['show_button'] = True
+                    print('test',st.session_state['show_button'])
+                        #print(f"Source:{document.metadata['source']}")
+    if 'show_button' in st.session_state and st.session_state['show_button']:
+        if st.button("👎", key='thumbs_down_button'):
+            print("in check")
+            q1 = st.session_state.past[-1]
+            print(q1)
+            with open("log.txt", "a") as f:
+                f.write(f"\nUnanswered question: {q1}")
+            st.success("Question saved in logs")
 
 if __name__ == "__main__":
     main()
