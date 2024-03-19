@@ -52,14 +52,15 @@ def create_conversation_chain(vector_store):
         memory_key='chat_history', return_messages=True)
     conversation_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
-        retriever=vector_store.as_retriever(),
+        retriever=vector_store.as_retriever(search_kwargs={"k": 3}),
         memory=memory
     )
     return conversation_chain
 
 def handle_user_input(user_question):
     if callable(st.session_state.conversation):
-        response = st.session_state.conversation({'question': user_question})
+        question = user_question + " Answer in step by step points only"
+        response = st.session_state.conversation({'question': question})
         if st.session_state.chat_history is None:
             st.session_state.chat_history = []
         st.session_state.chat_history = response['chat_history'] + st.session_state.chat_history
@@ -69,7 +70,7 @@ def handle_user_input(user_question):
                     "{{MSG}}", message.content), unsafe_allow_html=True)
             else:
                 st.write(bot_template.replace(
-                    "{{MSG}}", message.content), unsafe_allow_html=True)
+                    "{{MSG}}", message.content.split(" Answer in step by step points only")[0]), unsafe_allow_html=True)
     else:
         st.error("Conversation chain is not initialized. Please process documents first.")
 
