@@ -63,8 +63,6 @@ def handle_user_input(user_question):
             question = user_question
         else:
             question = user_question + " Answer in step by step points only"
-            print('-'*40)
-            print(question)
         response = st.session_state.conversation({'question': question})
         if st.session_state.chat_history is None:
             st.session_state.chat_history = []
