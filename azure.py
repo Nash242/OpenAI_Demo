@@ -30,7 +30,7 @@ def get_text_chunks(documents):
     return chunks
 
 def create_vectorstore(persist_directory, text_chunks, user_question):
-    embeddings = AzureOpenAIEmbeddings(azure_deployment="test2", open_api_version="2023-05-15")
+    embeddings = AzureOpenAIEmbeddings(azure_deployment="test2", openai_api_version="2023-05-15")
     
     # Check if the persistent vector database already exists
     if os.path.exists(persist_directory):
@@ -59,18 +59,30 @@ def create_conversation_chain(vector_store):
 
 def handle_user_input(user_question):
     if callable(st.session_state.conversation):
-        question = user_question + " Answer in step by step points only"
+        if (user_question.lower().strip() in ['hi','hello','good morning','good afternoon','good evening']):
+            question = user_question
+        else:
+            question = user_question + " Answer in step by step points only"
+            print('-'*40)
+            print(question)
         response = st.session_state.conversation({'question': question})
         if st.session_state.chat_history is None:
             st.session_state.chat_history = []
-        st.session_state.chat_history = response['chat_history'] + st.session_state.chat_history
-        for i, message in enumerate(st.session_state.chat_history):
+        st.session_state.chat_history = st.session_state.chat_history + response['chat_history'] 
+        for i, message in list(enumerate(st.session_state.chat_history)):
             if i % 2 != 0:
+                val = ""
+                for j in range(len(message.content)):
+                    if message.content[j].isdigit() and j < len(message.content)-1 and message.content[j+1] == ".":
+                        val += "\n" + message.content[j]
+                    else:
+                        val += message.content[j]
+                message.content = val
                 st.write(user_template.replace(
                     "{{MSG}}", message.content), unsafe_allow_html=True)
             else:
                 st.write(bot_template.replace(
-                    "{{MSG}}", message.content.split(" Answer in step by step points only")[0]), unsafe_allow_html=True)
+                    "{{MSG}}", message.content.split("Answer in step by step points only")[0]), unsafe_allow_html=True)
     else:
         st.error("Conversation chain is not initialized. Please process documents first.")
 
