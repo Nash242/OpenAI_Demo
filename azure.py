@@ -86,6 +86,39 @@ def handle_user_input(user_question):
     else:
         st.error("Conversation chain is not initialized. Please process documents first.")
 
+
+def handle_user_input2(user_question):
+    if callable(st.session_state.conversation):
+        # if (user_question.lower().strip() in ['hi','hello','good morning','good afternoon','good evening']):
+        #     question = user_question
+        # else:
+        question = user_question + " Answer in step by step points only"
+        response = st.session_state.conversation({'question': question})
+        if st.session_state.chat_history is None:
+            st.session_state.chat_history = []
+        st.session_state.chat_history = response['chat_history'] + st.session_state.chat_history
+        print(st.session_state.chat_history)
+        for i, message in list(enumerate(st.session_state.chat_history)):
+            if i % 2 != 0:
+                val = ""
+                for j in range(len(message.content)):
+                    if message.content[j].isdigit() and j < len(message.content)-1 and message.content[j+1] == ".":
+                        val += "\n" + message.content[j]
+                    else:
+                        val += message.content[j]
+                message.content = val
+                st.write(user_template.replace(
+                    "{{MSG}}", message.content), unsafe_allow_html=True)
+            else:
+                st.write(bot_template.replace(
+                    "{{MSG}}", message.content.split("Answer in step by step points only")[0]), unsafe_allow_html=True)
+    else:
+        st.error("Conversation chain is not initialized. Please process documents first.")
+
+def disable(b):
+    st.session_state["disabled"] = b
+
+
 def main():
     os.environ['AZURE_OPENAI_API_KEY'] = ""
     os.environ['AZURE_OPENAI_ENDPOINT'] = ""
@@ -102,24 +135,25 @@ def main():
         st.session_state.conversation = None
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
+    if "disabled" not in st.session_state:
+        st.session_state["disabled"] = False
 
     st.header("Chat with multiple files :books:")
 
-    with st.sidebar:
-        st.header("Below Listed are few examples, How to chat with the Data")
-        st.caption("Just click on the button to get the answer. Dropdown will contain the desired answer")
-        if st.button("Request to access the Dashboard?", key='demo1'):
-            demo = st.text_input("Enter your question?","Request to access the Dashboard?")
-            with st.expander("Answer"):
-                handle_user_input(demo)
-        if st.button("Facing issues with SOP/guidelines", key="demo2"):
-            demo2 = st.text_input("Enter your question?","Even after following the SOP/ guidelines I am still facing issue?")
-            with st.expander("Answer"):
-                handle_user_input(demo2)
-        if st.button("if Requested duration is exhausted?", key="demo3"):
-            demo3 = st.text_input("Enter your question?","What will happen if the Requested duration is exhausted?")
-            with st.expander("Answer"):
-                handle_user_input(demo3)
+    st.write("Following are the examples, when clicked will show How to chat with your data")
+  
+    if st.button("Request to access the Dashboard?", key='demo1',on_click=disable, args=(True,), use_container_width=True):
+        demo = st.text_input("Enter your question?","Request to access the Dashboard?",disabled=st.session_state.get("disabled", True))
+        with st.expander("Answer"):
+            handle_user_input2(demo)
+    if st.button("Facing issues with SOP/guidelines", key="demo2",on_click=disable, args=(True,), use_container_width=True):
+        demo2 = st.text_input("Enter your question?","Even after following the SOP/ guidelines I am still facing issue?",disabled=st.session_state.get("disabled", True))
+        with st.expander("Answer"):
+            handle_user_input2(demo2)
+    # if st.button("if Requested duration is exhausted?", key="demo3",on_click=disable, args=(True,), use_container_width=True):
+    #     demo3 = st.text_input("Enter your question?","What will happen if the Requested duration is exhausted?",disabled=st.session_state.get("disabled", True))
+    #     with st.expander("Answer"):
+    #         handle_user_input2(demo3)
 
 
 
