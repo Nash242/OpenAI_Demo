@@ -43,7 +43,7 @@ def create_vectorstore(persist_directory, text_chunks, user_question):
         )
         vector_store.persist()
         final_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
-        final_db.similarity_search_with_score(user_question,k=3)
+        #final_db.similarity_search_with_score(user_question,k=3)
     return final_db
 
 def create_conversation_chain(vector_store):
@@ -63,6 +63,8 @@ def handle_user_input(user_question):
             question = user_question
         else:
             question = user_question + " Answer in step by step points only"
+            print('-'*40)
+            print(question)
         response = st.session_state.conversation({'question': question})
         if st.session_state.chat_history is None:
             st.session_state.chat_history = []
@@ -102,7 +104,26 @@ def main():
         st.session_state.chat_history = None
 
     st.header("Chat with multiple files :books:")
-    user_question = st.text_input("Ask a question about your documents:")
+
+    with st.sidebar:
+        st.header("Below Listed are few examples, How to chat with the Data")
+        st.caption("Just click on the button to get the answer. Dropdown will contain the desired answer")
+        if st.button("Request to access the Dashboard?", key='demo1'):
+            demo = st.text_input("Enter your question?","Request to access the Dashboard?")
+            with st.expander("Answer"):
+                handle_user_input(demo)
+        if st.button("Facing issues with SOP/guidelines", key="demo2"):
+            demo2 = st.text_input("Enter your question?","Even after following the SOP/ guidelines I am still facing issue?")
+            with st.expander("Answer"):
+                handle_user_input(demo2)
+        if st.button("if Requested duration is exhausted?", key="demo3"):
+            demo3 = st.text_input("Enter your question?","What will happen if the Requested duration is exhausted?")
+            with st.expander("Answer"):
+                handle_user_input(demo3)
+
+
+
+    user_question = st.chat_input("Ask a question about your documents:")
     if user_question:
         handle_user_input(user_question)
 
